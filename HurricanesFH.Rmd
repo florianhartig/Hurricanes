@@ -1,0 +1,104 @@
+Hurricanes
+========================================================
+
+Reanalysis of Jung, K.; Shavitt, S.; Viswanathan, M. & Hilbe, J. M. (2014) Female hurricanes are deadlier than male hurricanes. PNAS, in press.
+
+By Florian Hartig, http://florianhartig.wordpress.com/
+
+Heavily based on previous work by Bob O'Hara, from whom forked this repository
+
+See Bob's and GrrlScientist's conclusions at http://www.theguardian.com/science/grrlscientist/2014/jun/04/hurricane-gender-name-bias-sexism-statistics
+
+Loading the data
+
+```{r message=FALSE}
+#rm(list=ls(all=TRUE))
+
+library(gdata)
+library(mgcv)
+library(MASS)
+library(MuMIn)
+
+# Read in the data / I took this one from Bob
+Data=read.xls("http://www.pnas.org/content/suppl/2014/05/30/1402786111.DCSupplemental/pnas.1402786111.sd01.xlsx", nrows=92, as.is=TRUE)
+Data$MasFem = as.vector(scale(Data$MasFem))
+#Data$NDAM = scale(Data$NDAM) I didn't scale NDAM, which I would usually have done because of the interaction because I want to sqrt it later
+# hope it's fine the MasFem scaled
+
+```
+
+Fit of the full model used in paper with mgcv
+
+```{r warning=F}
+originalModelGAM=gam(alldeaths~MasFem*(Minpressure_Updated.2014 + NDAM), data=Data, family=negbin(theta=c(0.2,10)), na.action = "na.fail")
+summary(originalModelGAM)
+#gam.check(originalModelGAM)
+```
+
+Calculating all model supsets and looking at the AIC shows the data supports this model complexity
+
+```{r warning=F}
+print(dredge(originalModelGAM)[1:5])
+```
+
+Just for my curiousity, I wanted to see how the results of the new negative binomial in mgcv (which I had never used before) compare to glm.mb in MASS
+
+```{r warning=F}
+originalModelGLMNB <- glm.nb(alldeaths~MasFem*(Minpressure_Updated.2014+NDAM), data=Data, na.action = "na.fail")
+summary(originalModelGLMNB)
+#gam.check(originalModelGLMNB)
+print(dredge(originalModelGLMNB)[1:5])
+```
+
+Seems the parameters are identical, but AICc isn't quite, no idea why. Also, the parameters seem different from those reported in the paper. Also here the reason is not quite clear to me, they be doing something different. The parameters that are isolated as significant are identical though. 
+
+As the model selection ranks the full model as best, one is tempted to add more parameters, specially when noting the problems in the residuals that I won't plot again here as they were already discussed by Bob and GrrlScientist
+
+So, let's add quadratic and sqrt effects and do the model selection again 
+
+```{r warning=F}
+LargerModel=gam(alldeaths~MasFem*(Minpressure_Updated.2014+ sqrt(NDAM)+ NDAM + I(NDAM^2)), data=Data, family=negbin(theta=c(0.2,10)), na.action = "na.fail")
+#gam.check(LargerModel)
+summary(LargerModel)
+print(dredge(LargerModel)[1:10])
+```
+
+Note that the highest-ranked model has actually lower DF (only) than the full model from the paper, and still a much better fit; and all the good models include nonlinear terms. Clearly, a nonlinear term in NDAM is needed. 
+
+The best model doesn't include femininity, but within a Delta AICc of 2 there are quite a few models that have femininity still in. I would thus say that Bob is definitely right about the nonlinear term, and the absense of the nonlinear term was probably compensated by adding effects on the interactions and thus overstimating the effects of femininity. However, accounting for that, there might still be a small effect of MasFem. The AICc is in the possible range, and the estimates are consistently around 0.05.
+
+This gets even more likely when we exlude furter outliers. It was pointed out by some commentators that a few hurricanes with very large damage may bias the analysis. If we removed the ~3 points with sqrt(NDAM) > 200, we get similar results, but the models with femininity included are even closer to the best model (Delta AICc of 0.24 for the best model with femininity, which is basically as good as the best model).
+
+
+```{r warning=F}
+LargerModelOutlier=gam(alldeaths~MasFem*(Minpressure_Updated.2014+ sqrt(NDAM)+ NDAM + I(NDAM^2)), data=Data[sqrt(Data$NDAM) < 200,], family=negbin(theta=c(0.2,10)), na.action = "na.fail")
+summary(LargerModelOutlier)
+print(dredge(LargerModelOutlier)[1:10])
+```
+
+
+So, not to make a suggestion that this is the correct model, but just to see how a best-case scenario for femininity would look like, I'm taking model 2 with the outlier-removed data that inlcuded femininity with a Delta AIC of 0.24, and plot the effects. 
+
+```{r}
+possibleModel=gam(alldeaths~ MasFem*NDAM + sqrt(NDAM) , data=Data[sqrt(Data$NDAM) < 200,], family=negbin(theta=c(0.2,10)), na.action = "na.fail")
+summary(possibleModel)
+#gam.check(possibleModel)
+AICc(possibleModel)
+```
+
+Plotting the predictions of this model for MasFem and NDAM shows that there is a substantial effect of femininity for higher damage values (crosses are the data values, size of the crosses is proportional to fatalities)
+
+```{r fig.width=6, fig.height=6}
+vis.gam(possibleModel, view=c("MasFem","NDAM"),plot.type="contour",color="terrain", type = "response")
+points(Data$MasFem, Data$NDAM, cex = Data$alldeaths/20, pch =  3)
+```
+
+It should be noted that all this depends on a few data points, and most of them are located in the low-damage area. So, my gut feeling is that reported uncertainty (that I didn't plot) is still overconfident in the high-damage area, so I wouldn't trust any model to be right in this area based on these few data points. 
+
+Final conclusion: it is possible, but unproven that femininity has an influence on fatalities. IF we want to believe this, the model above would be a plausible model, and IF we believe that this model can be trusted in the high NDAM area where we have FEW data points, then it would look as if femininity has a practically relevant impact on fatalites. 
+
+Many, maybe too many IFs ...   
+
+
+
+
