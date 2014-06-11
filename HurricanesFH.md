@@ -30,7 +30,7 @@ Data$MasFem = as.vector(scale(Data$MasFem))
 ```
 
 
-Fit of the full model used in paper with mgcv
+Fit of the full model used in paper with mgcv; creating all model supsets and comparing AICc shows the data supports this model complexity
 
 
 ```r
@@ -65,13 +65,6 @@ summary(originalModelGAM)
 
 ```r
 # gam.check(originalModelGAM)
-```
-
-
-Calculating all model supsets and looking at the AIC shows the data supports this model complexity
-
-
-```r
 print(dredge(originalModelGAM)[1:5])
 ```
 
@@ -96,7 +89,7 @@ print(dredge(originalModelGAM)[1:5])
 ```
 
 
-Just for my curiousity, I wanted to see how the results of the new negative binomial in mgcv (which I had never used before) compare to glm.mb in MASS
+I wanted to see how the results of mgcv compare to glm.mb in MASS
 
 
 ```r
@@ -170,9 +163,7 @@ print(dredge(originalModelGLMNB)[1:5])
 
 Seems the parameters are identical, but AICc isn't quite, no idea why. Also, the parameters seem different from those reported in the paper. Also here the reason is not quite clear to me, they be doing something different. The parameters that are isolated as significant are identical though. 
 
-As the model selection ranks the full model as best, one is tempted to add more parameters, specially when noting the problems in the residuals that I won't plot again here as they were already discussed by Bob and GrrlScientist
-
-So, let's add quadratic and sqrt effects and do the model selection again 
+As the model selection ranks the full model as best, one is tempted to add more parameters, specially when noting the problems in the residuals that I won't plot again here as they were already discussed by Bob and GrrlScientist. So, let's add quadratic and sqrt effects and do the model selection again 
 
 
 ```r
@@ -377,7 +368,7 @@ vis.gam(possibleModel, view = c("MasFem", "NDAM"), plot.type = "contour", color 
 points(Data$MasFem, Data$NDAM, cex = Data$alldeaths/20, pch = 3)
 ```
 
-![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8.png) 
+![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7.png) 
 
 
 It should be noted that all this depends on a few data points, and most of them are located in the low-damage area. So, my gut feeling is that reported uncertainty (that I didn't plot) is still overconfident in the high-damage area, so I wouldn't trust any model to be right in this area based on these few data points. 

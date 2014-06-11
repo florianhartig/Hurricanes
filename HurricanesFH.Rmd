@@ -27,21 +27,16 @@ Data$MasFem = as.vector(scale(Data$MasFem))
 
 ```
 
-Fit of the full model used in paper with mgcv
+Fit of the full model used in paper with mgcv; creating all model supsets and comparing AICc shows the data supports this model complexity
 
 ```{r warning=F}
 originalModelGAM=gam(alldeaths~MasFem*(Minpressure_Updated.2014 + NDAM), data=Data, family=negbin(theta=c(0.2,10)), na.action = "na.fail")
 summary(originalModelGAM)
 #gam.check(originalModelGAM)
-```
-
-Calculating all model supsets and looking at the AIC shows the data supports this model complexity
-
-```{r warning=F}
 print(dredge(originalModelGAM)[1:5])
 ```
 
-Just for my curiousity, I wanted to see how the results of the new negative binomial in mgcv (which I had never used before) compare to glm.mb in MASS
+I wanted to see how the results of mgcv compare to glm.mb in MASS
 
 ```{r warning=F}
 originalModelGLMNB <- glm.nb(alldeaths~MasFem*(Minpressure_Updated.2014+NDAM), data=Data, na.action = "na.fail")
@@ -52,9 +47,7 @@ print(dredge(originalModelGLMNB)[1:5])
 
 Seems the parameters are identical, but AICc isn't quite, no idea why. Also, the parameters seem different from those reported in the paper. Also here the reason is not quite clear to me, they be doing something different. The parameters that are isolated as significant are identical though. 
 
-As the model selection ranks the full model as best, one is tempted to add more parameters, specially when noting the problems in the residuals that I won't plot again here as they were already discussed by Bob and GrrlScientist
-
-So, let's add quadratic and sqrt effects and do the model selection again 
+As the model selection ranks the full model as best, one is tempted to add more parameters, specially when noting the problems in the residuals that I won't plot again here as they were already discussed by Bob and GrrlScientist. So, let's add quadratic and sqrt effects and do the model selection again 
 
 ```{r warning=F}
 LargerModel=gam(alldeaths~MasFem*(Minpressure_Updated.2014+ sqrt(NDAM)+ NDAM + I(NDAM^2)), data=Data, family=negbin(theta=c(0.2,10)), na.action = "na.fail")
